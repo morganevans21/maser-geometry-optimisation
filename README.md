@@ -617,7 +617,7 @@ If you use this work, please cite the Master's thesis:
   title   = {Quantum Design and Simulation of MASERs in the Strong Coupling Limit},
   year    = {2025},
   type    = {Master's Thesis},
-  note    = {[Online]. Available: \url{}}
+  note    = {[Online]. Available: \url{https://github.com/morganevans21/maser-geometry-optimisation}}
 }
 ```
 
