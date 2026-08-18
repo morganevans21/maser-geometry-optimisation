@@ -1,0 +1,52 @@
+\chapter{Conclusions}
+This project set out to investigate whether the shape of a dielectric resonator
+can be optimised to enhance the Purcell factor, and consequently improve the
+performance of a solid-state MASER operating at room temperature and zero
+magnetic field. Using COMSOL Multiphysics\textregistered{}, COMSOL API and Java,
+a genetic algorithm (GA) was implemented to iteratively optimise the geometry of
+a \ce{SrTiO3}-based resonator. The primary objective was to maximise the ratio
+of quality factor ($Q_f$) to mode volume ($V_m$), which are the main metrics
+that determine the Purcell factor of the resonator and is very important in
+determining the efficiency of microwave amplification.
+
+The first significant outcome of this work was the successful creation and
+validation of an initialised geometry that exhibited strong
+$\text{TE}_{01\delta}$ mode confinement at the target frequency of 1.45 GHz.
+This was achieved by modifying the original MASER-in-a-Shoebox dimensions and
+tuning the resonator using geometric adjustments, mimicking the real-world
+tuning process via adjustable cavity ceilings. This model provided a baseline
+for optimisation and ensured that all GA-evaluated geometries could be fairly
+compared.
+
+The GA produced a series of candidate geometries, with the best-performing
+structure demonstrating a marked improvement in Purcell factor compared to the
+baseline model. While this improvement was obtained under idealised (lossless)
+conditions, it confirmed that purely geometrical changes can enhance the
+electromagnetic confinement properties of the resonator. Julia-based simulations
+using \texttt{QuantumCumulants.jl} showed that this translated into increased
+output power under strong coupling assumptions, although these results are
+illustrative rather than predictive, serving as a visual tool to compare
+performance between the baseline and optimised models. However, when the
+dielectric loss of \ce{SrTiO3} was introduced into the simulation, the GA was
+very slow at discovering more optimal configurations and exhibited mode
+switching. Thus making any results invalid. After existed that configurations
+with a higher Purcell factor existed, the results were further examined to
+determine where the root of the error was. It was ultimately concluded that the
+code contained a bug.
+
+This project has shown that resonator geometry can play a meaningful role in
+enhancing MASER performance. Despite the results be preliminary, they (and the
+code produced) should hopefully serve as a framework for future investigations
+into this area of research. The Java-based GA proved a suitable prototype
+however more sophisticated numerical control is required as Java lacks the
+native libraries and numerical tools. Hence, the migration to COMSOL’s
+LiveLink\texttrademark{} for MATLAB\textregistered{} environment has been
+proposed. This environment can utilise the more flexible and numerically robust
+to implement new optimisation techniques, such as machine learning or
+simulations in 3D.
+
+In summary, this project has demonstrated that resonator geometry significantly
+affects key MASER performance metrics. While lossless simulations provide a
+useful sandbox for testing ideas, realistic modelling and more advanced
+optimisation tools will be essential for translating these insights into
+deployable MASER technologies.

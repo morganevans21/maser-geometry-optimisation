@@ -1,0 +1,42 @@
+\documentclass[
+  11pt,
+  a4paper,
+  twoside
+]{report}
+
+\input{preamble/preamble.tex}
+
+\begin{document}
+
+\input{frontmatter/titlepage.tex}
+
+\clearpage
+\phantomsection
+
+\input{frontmatter/abstract.tex}
+
+\tableofcontents
+
+\pagenumbering{roman}           % Roman numerals for front matter pages
+
+\input{frontmatter/declarations.tex}
+
+\clearpage                      % Start new page for main matter
+\pagenumbering{arabic}          % Arabic numbers for main matter pages
+
+\input{chapters/chapter1.tex}
+
+\input{chapters/chapter2.tex}
+
+\input{chapters/chapter3.tex}
+
+\input{chapters/chapter4.tex}
+
+\input{chapters/chapter5.tex}
+
+\input{chapters/chapter6.tex}
+
+\input{chapters/chapter7.tex}
+
+\small
+\printbibliography

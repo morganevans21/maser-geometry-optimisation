@@ -1,0 +1,20 @@
+\begin{abstract}
+This project investigates whether the shape of a dielectric resonator could be
+optimised to maximise the Purcell factor of a solid-state MASER at room
+temperature and zero field. COMSOL Multiphysics\textregistered{}{} and a
+Java-based genetic algorithm (GA) were used to simulate and test thousands of
+resonator shapes to determine those that optimised electromagnetic confinement
+while still being resonant at 1.45 GHz. A 10x10 binary subgrid design using a
+binary matrix allowed for shape exploration without remeshing. Results showed
+that in theoretical, loss-free conditions, the optimised geometry significantly
+outperformed the original MASER-in-a-Shoebox design in Purcell factor and
+simulated masing output power. However, when the dielectric is assigned a
+realistic loss tangent, this outperformance was not seen and the GA could not
+find dielectric shapes which operate at the correct mode. Additional future work
+would require exploring transfer to COMSOL LiveLink\texttrademark{} for
+MATLAB\textregistered{}{}, which would result in more robust algorithms and
+co-localisation with machine learning methods. Overall, this work reassures that
+resonator geometry has a strong influence on MASER performance and provides a
+foundation for more advanced, physically realistic optimisation of cavity
+geometries for future microwave technologies.
+\end{abstract}

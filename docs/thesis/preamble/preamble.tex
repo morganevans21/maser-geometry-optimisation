@@ -1,0 +1,141 @@
+%-------------------------------------------------------------------------------
+%	Language and encoding
+%-------------------------------------------------------------------------------
+\usepackage[british]{babel}   % Set language
+\usepackage{csquotes}
+\usepackage[T1]{fontenc} 			% T1 for use of ligatures etc.
+\usepackage{textcomp}
+
+%-------------------------------------------------------------------------------
+% Fonts
+%-------------------------------------------------------------------------------
+\usepackage{fontspec}                                    % Setting custom fonts
+\usepackage{lmodern}
+
+\defaultfontfeatures{
+  Ligatures=TeX,
+  Path=fonts/
+}
+
+\setmonofont{ImperialSansText}[                          % Monospace font
+	UprightFont = *-Regular.ttf,
+  BoldFont    = *-Semibold.ttf
+]
+
+\newfontfamily{\ImperialSansMedium}{ImperialSansText}[   % Additional variants
+	UprightFont = *-Medium.ttf,
+	BoldFont    = *-Semibold.ttf,
+]
+
+\newfontface{\ImperialSansExtraBold}{ImperialSansText-Extrabold.ttf}
+\newfontface{\ImperialSansExtraLight}{ImperialSansText-Extralight.ttf}
+\newfontface{\ImperialSansSemiBold}{ImperialSansText-Semibold.ttf}
+\newfontface{\ImperialSansLight}{ImperialSansText-Light.ttf}
+
+%\usepackage{inconsolata}                                % Inconsolata font
+%\usepackage{courier}                                    % Courier font
+
+%-------------------------------------------------------------------------------
+% Page layout
+%-------------------------------------------------------------------------------
+\usepackage{emptypage}								 % No header/footer for empty page
+\usepackage{fancyhdr}
+\usepackage{geometry}				           % Adjusts page layout
+\usepackage[singlespacing]{setspace}   % Adjust linespacing
+
+%\pagestyle{plain}      % Include page number in footer
+
+\geometry{                             % Set page geometry to A4
+  margin     = 1.5cm,
+  headheight = 16pt,
+  headsep    = 3mm
+}
+
+\pagestyle{fancy}
+\fancyhf{} 									           % Clear all header and footer fields
+
+\fancyhead[R]{\leftmark} 						   % Gives the level 1 sectioning title
+
+\fancyfoot[L]{\ImperialSansSemiBold{Imperial College London}}
+\fancyfoot[C]{\thepage} 					     % Page number
+\fancyfoot[R]{Morgan Evans}
+
+\setcounter{secnumdepth}{1}            % Numbering only sections and subsections
+\setcounter{tocdepth}{1}               % ToC shows sections and subsections
+
+%-------------------------------------------------------------------------------
+% Mathematics
+%-------------------------------------------------------------------------------
+\usepackage{mathtools} 						 % Maths/equation rendering
+
+\numberwithin{equation}{section}   % Reset numbering within a structural object
+\numberwithin{figure}{section}     %  ""
+
+%-------------------------------------------------------------------------------
+% Scientific packages
+%-------------------------------------------------------------------------------
+\usepackage[version=4]{mhchem}   % Typesetting of chemical formulae
+\usepackage{siunitx}						 % Typesetting of uncertainties
+
+\sisetup{
+  detect-all,
+  detect-weight    = true,       % Make units bold if text bold
+  detect-family    = true,
+  range-units      = single,     % Only one SI unit for range
+  multi-part-units = single,     % Don't repeat units for multi-part numbers
+  separate-uncertainty,          % List values with uncertanties as X\pm Y
+}
+
+%-------------------------------------------------------------------------------
+% Graphics
+%-------------------------------------------------------------------------------
+\usepackage{caption}               % Captions for floats (figures and tables)
+\usepackage{graphicx}							 % Rendering of floating graphics
+\usepackage[section]{placeins}		 % Define float barriers at end of sections
+
+%-------------------------------------------------------------------------------
+% Tables
+%-------------------------------------------------------------------------------
+\usepackage{array} 								 % Creating tables
+\usepackage{booktabs}							 % Professional tables, provides /toprule etc.
+\usepackage{multirow}
+
+% Custom column types
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+\setlength{\arrayrulewidth}{1pt}   % Thickness of table rules
+
+%-------------------------------------------------------------------------------
+% Bibliography
+%-------------------------------------------------------------------------------
+\usepackage[backend=biber]{biblatex}
+
+\addbibresource{bibliography/references.bib}   % Path to bibliography file
+
+%-------------------------------------------------------------------------------
+%	Custom commands
+%-------------------------------------------------------------------------------
+\usepackage[svgnames]{xcolor}   % Required for defining and using custom colors
+
+\definecolor{ICLBlue}{RGB}{0, 0, 205}
+
+%\usepackage{datetime}
+
+\newcommand{\monthyeardate}{\ifcase \month \or January\or February\or March\or %
+April\or May \or June\or July\or August\or September\or October\or November\or %
+December\fi, \number \year}
+
+%-------------------------------------------------------------------------------
+% Hyperlinks
+%-------------------------------------------------------------------------------
+\usepackage{bookmark}   % Hyperlinks for references and citations
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = black,
+  citecolor  = blue,
+  urlcolor   = blue
+}

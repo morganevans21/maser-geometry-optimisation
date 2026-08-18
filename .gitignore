@@ -1,0 +1,41 @@
+
+# Historical/experimental versions
+**/earlier-versions/
+
+# Java / Maven
+java/target/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Julia
+Manifest.toml.local
+
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local/project-only files
+structure.md
+statistics-plan.md
+
+# Fonts with uncertain redistribution rights
+docs/thesis/fonts/
