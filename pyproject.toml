@@ -1,0 +1,21 @@
+[project]
+name = "maser-geometry-optimisation"
+version = "1.0.0"
+description = "Computational optimisation of MASER resonator geometry using genetic algorithm and FEM simulation"
+authors = [
+  {name = "Morgan Evans"}
+]
+dependencies = []
+requires-python = ">=3.8"
+license = {text = "MIT"}
+
+[project.urls]
+"Homepage" = "https://github.com/morgan/maser-geometry-optimisation"
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"

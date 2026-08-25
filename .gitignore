@@ -3,7 +3,7 @@
 **/earlier-versions/
 
 # Java / Maven
-java/target/
+src/java/target/
 
 # Python
 __pycache__/
@@ -36,6 +36,9 @@ Manifest.toml.local
 # Local/project-only files
 structure.md
 statistics-plan.md
+CLAUDE.md
 
 # Fonts with uncertain redistribution rights
 docs/thesis/fonts/
+
+next-steps.md
