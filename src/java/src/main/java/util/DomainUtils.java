@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import main.java.io.jenetics.BitChromosome;
+import io.jenetics.BitChromosome;
 import main.java.model.DomainAssignment;
 
 public class DomainUtils {
