@@ -13,6 +13,36 @@
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jenetics.version>5.0.0</jenetics.version>
+        <comsol.version>6.0.0.405</comsol.version>
+        <jackson.version>2.15.2</jackson.version>
+        <!-- User should adjust this to their COMSOL installation directory -->
+        <comsol.home>/opt/comsol60/multiphysics</comsol.home>
     </properties>
+
+    <dependencies>
+        <!-- Jenetics -->
+        <dependency>
+            <groupId>io.jenetics</groupId>
+            <artifactId>jenetics</artifactId>
+            <version>${jenetics.version}</version>
+        </dependency>
+
+        <!-- COMSOL dependencies marked as provided for compilation (not available in test env) -->
+        <dependency>
+            <groupId>com.comsol</groupId>
+            <artifactId>comsol.model</artifactId>
+            <version>${comsol.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.comsol</groupId>
+            <artifactId>comsol.util</artifactId>
+            <version>${comsol.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
 
 </project>

@@ -6,9 +6,9 @@ import java.util.List;
 import com.comsol.model.Model;
 
 import main.java.io.CsvManager;
-import main.java.io.jenetics.BitChromosome;
-import main.java.io.jenetics.BitGene;
-import main.java.io.jenetics.engine.EvolutionResult;
+import io.jenetics.BitChromosome;
+import io.jenetics.BitGene;
+import io.jenetics.engine.EvolutionResult;
 import main.java.model.DomainAssignment;
 import main.java.util.DomainUtils;
 
@@ -43,7 +43,8 @@ public class GenerationLogger {
 
     public static void logGeneration(
             EvolutionResult<BitGene, Double> result,
-            List<Integer> subgridDomains) {
+            List<Integer> subgridDomains,
+            long seed) {
 
         int currentGeneration = (int) result.generation(); // Get current generation number
         BitChromosome bestChromosome = (BitChromosome) result.bestPhenotype().genotype().get(0);
@@ -62,14 +63,23 @@ public class GenerationLogger {
                 subgridDomains);
 
         // Log to console
-        System.out.println("Generation: " + currentGeneration + " | Best Purcell Factor: " + bestPurcellFactor);
+        System.out.println("Generation: " + currentGeneration + " | Best Purcell Factor: " + bestPurcellFactor + " | Seed: " + seed);
         System.out.println("Domains assigned to matDielec: " + assignment.dielectricDomains);
         System.out.println("Domains assigned to matAir: " + assignment.airDomains);
 
+        // Log to CSV file (existing functionality)
         CsvManager.appendGenerationToCsv(
                 currentGeneration,
                 bestPurcellFactor,
                 averagePurcellFactor,
+                assignment,
+                seed);
+
+        // Also log to TXT file (new functionality)
+        CsvManager.appendToLog(
+                currentGeneration,
+                bestPurcellFactor,
+                seed,
                 assignment);
     }
 }

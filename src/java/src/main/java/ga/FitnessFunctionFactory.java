@@ -15,6 +15,9 @@ import main.java.simulation.PermittivityTuner;
 import main.java.simulation.SimulationReader;
 import main.java.simulation.StudyRunner;
 
+/**
+ * Factory for creating fitness functions that adapt the COMSOL objective to Jenetics Function interface.
+ */
 public class FitnessFunctionFactory {
 
     public static Function<Genotype<BitGene>, Double> createFitnessFunction(

@@ -17,6 +17,9 @@ import main.java.io.CsvManager;
 import main.java.simulation.ModelInitialiser;
 import main.java.util.DomainUtils;
 
+/**
+ * Entry point for the MASER geometry optimisation using a Genetic Algorithm.
+ */
 public class Main {
     public static void main(String[] args) {
 

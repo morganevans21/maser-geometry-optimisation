@@ -8,15 +8,15 @@ import com.comsol.model.Model;
 
 import main.java.config.GAConfig;
 import main.java.ga.GenerationLogger;
-import main.java.io.jenetics.BitChromosome;
-import main.java.io.jenetics.BitGene;
-import main.java.io.jenetics.EliteSelector;
-import main.java.io.jenetics.Genotype;
-import main.java.io.jenetics.Mutator;
-import main.java.io.jenetics.SinglePointCrossover;
-import main.java.io.jenetics.TournamentSelector;
-import main.java.io.jenetics.engine.Engine;
-import main.java.io.jenetics.engine.EvolutionResult;
+import io.jenetics.BitChromosome;
+import io.jenetics.BitGene;
+import io.jenetics.EliteSelector;
+import io.jenetics.Genotype;
+import io.jenetics.Mutator;
+import io.jenetics.SinglePointCrossover;
+import io.jenetics.TournamentSelector;
+import io.jenetics.engine.Engine;
+import io.jenetics.engine.EvolutionResult;
 import main.java.simulation.MaterialManager;
 import main.java.simulation.StudyRunner;
 
@@ -33,6 +33,7 @@ public class GeneticAlgorithm {
                 .alterers(new Mutator<>(config.mutationRate), new SinglePointCrossover<>(config.crossoverRate))
                 .offspringFraction(0.8)
                 .survivorsSelector(new EliteSelector<>(2))
+                .random(java.util.Random::new, config.seed) // Initialize random number generator with seed
                 .build();
     }
 
@@ -43,7 +44,7 @@ public class GeneticAlgorithm {
 
         return engine.stream()
                 .limit(config.generations)
-                .peek(result -> GenerationLogger.logGeneration(result, subgridDomains))
+                .peek(result -> GenerationLogger.logGeneration(result, subgridDomains, config.seed))
                 .collect(EvolutionResult.toBestEvolutionResult());
     }
 

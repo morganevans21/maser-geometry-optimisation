@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.comsol.model.Model;
 
-import main.java.io.jenetics.BitChromosome;
+import io.jenetics.BitChromosome;
 
 public class MaterialManager {
 
@@ -51,7 +51,7 @@ public class MaterialManager {
             assignMaterial(
                     model,
                     domainID,
-                    chromosome.get(i).bit());
+                    chromosome.getGene(i).getBit());
         }
     }
 }

@@ -1,16 +1,25 @@
 package main.java.config;
 
+import java.io.File;
 import java.nio.file.Path;
 
+/**
+ * Constants for the project.
+ */
 public final class Constants {
 
     private Constants() {
         // Prevent instantiation
     }
 
-    public static final Path RESULTS_DIRECTORY = Path.of("..", "results", "raw");
+    public static final Path RESULTS_BASE_DIRECTORY = Path.of("..", "results", "raw");
 
-    public static final Path RESULTS_FILE = RESULTS_DIRECTORY.resolve("ga-results.csv");
-
-    public static final Path LOG_FILE = RESULTS_DIRECTORY.resolve("ga-logs.csv");
+    /**
+     * Gets the base results directory as a File.
+     *
+     * @return the base results directory
+     */
+    public static File getResultsBaseDirectory() {
+        return RESULTS_BASE_DIRECTORY.toFile();
+    }
 }

@@ -1,355 +1,312 @@
-# Quantum Optimisation of MASER Designs
+# MASER Geometry Optimisation
 
-**Computational optimisation of MASER resonator geometry using a binary genetic algorithm coupled to automated finite-element electromagnetic simulation.**
+**High-dimensional black-box optimisation with stochastic search, numerical simulation and statistical analysis**
 
-> Master's project — MEng Materials Science and Engineering, Imperial College London
+> Individual Master's project - MEng Materials Science and Engineering, Imperial College London
 
-[hero architecture figure]
+![Architecture Diagram](docs/architecture.png)
 
-[![Java 11](https://img.shields.io/badge/Java-11-ED8B00?logo=openjdk\&logoColor=white)](https://www.oracle.com/java/)
-[![Julia 1.9](https://img.shields.io/badge/Julia-1.9.4-9558B2?logo=julia\&logoColor=white)](https://julialang.org/)
-[![Maven](https://img.shields.io/badge/build-Maven-C71A36?logo=apachemaven\&logoColor=white)](https://maven.apache.org/)
-[![COMSOL](https://img.shields.io/badge/simulation-COMSOL-1F4E79)](https://www.comsol.com/)
+This project investigates the use of **stochastic optimisation to solve a high-dimensional, computationally expensive black-box optimisation problem**.
+
+The application is the optimisation of a microwave resonator for a pentacene MASER, but the core computational problem is more general: **searching a discrete space of $2^{100}$ possible configurations when evaluating a single candidate requires an expensive finite-element simulation**.
+
+I designed and implemented the optimisation and simulation pipeline from the ground up, including the Java optimisation engine, COMSOL automation, frequency correction, result caching, experiment metadata and reproducibility infrastructure. Julia is used for downstream physical modelling, while Python is being developed for statistical analysis of optimisation behaviour.
+
+The project is particularly concerned with a question that is central to computational research:
+
+> When an optimisation algorithm appears to find a better solution, how can we determine whether the improvement is genuine, reproducible and actually aligned with the underlying objective?
 
 ---
 
-## Overview
-This project investigates whether evolutionary optimisation can discover novel resonator geometries for a **pentacene MASER** operating in the strong-coupling regime.
+## Project at a glance
+
+| Component | Description |
+|---|---|
+| Problem | Optimise a 100-dimensional discrete design space |
+| Search space | $2^{100} \approx 27 \cdot 10^{30}$ configurations |
+| Optimisation | Binary genetic algorithm |
+| Objective | Expensive simulation-based black-box fitness function |
+| Simulation | COMSOL finite-element electromagnetic model |
+| Optimisation engine | Java + Jenetics |
+| Post-processing | Julia |
+| Statistical analysis | Python |
+| Reproducibility | Configurable random seeds + run metadata |
+| Efficiency | Evaluation caching + interpolation-based frequency correction |
+| Typical run time | up to 8 hours for 250 generations on the development system |
+
+---
+
+## Why this is an interesting optimisation problem
+
+The design is represented by a binary vector
+
+$$
+x \in \{0,1\}^{100},
+$$
+
+giving approximately
+
+$$
+2^{100} \approx 1.27 \cdot 10^{30}
+$$
+
+Exhaustive search is therefore infeasible.
+
+More importantly, the objective function is **expensive**. A candidate solution cannot simply be evaluated with a closed-form expression: the optimisation pipeline must construct the corresponding model, run a finite-element simulation and extract the resulting objective value.
 
-The design problem is formulated as a **100-dimensional binary optimisation problem**. Each chromosome represents a candidate dielectric geometry, with each binary variable selecting between dielectric material and air:
+This creates several challenges familiar from computational optimisation:
 
-```text
-false → dielectric (matDielec)
-true  → air       (matAir)
-```
+- High-dimensional discrete search
+- Expensive objective evaluations
+- Stochastic optimisation
+- Limited evaluation budgets
+- Repeated evaluations of identical candidates
+- Potentially misleading proxy objectives
+- Need for reproducible experiments
+- Need to distinguish optimisation signal from stochastic variation
 
-The resulting search space contains [2^{100} \approx 1.27\times10^{30}] possible geometries.
+These constraints motivated the design of the optimisation framework as much as the choice of optimisation algorithm itself.
 
-A Java optimisation framework based on [Jenetics](https://jenetics.io/) generates candidate geometries and automatically evaluates them using a COMSOL finite-element model. The simulation pipeline constructs the geometry, remeshes and solves the model, extracts the Purcell factor, and returns the result to the genetic algorithm as the fitness value.
+---
 
-The best candidate geometries are subsequently analysed using a Julia-based quantum model built with `QuantumCumulants` to estimate their theoretical MASER output power.
+## Approach
 
-## Key Results
+The complete computational workflow is:
 
-### Lossless proof of concept
+             Candidate configuration
+                      │
+                      ▼
+             Binary genetic algorithm
+                      │
+                      ▼
+              Evaluation / cache
+                 ┌────┴────┐
+                 │         │
+              Cache hit   New model
+                 │         │
+                 │         ▼
+                 │    COMSOL FEM solve
+                 │         │
+                 │         ▼
+                 │    Objective value
+                 │         │
+                 └────┬────┘
+                      │
+                      ▼
+                Fitness returned
+                      │
+                      ▼
+              Population evolves
+                      │
+                      ▼
+             Logged run + metadata
+                      │
+              ┌───────┴────────┐
+              ▼                ▼
+        Julia modelling   Python analysis
 
-Under lossless dielectric conditions, the genetic algorithm discovered resonator geometries with substantially higher Purcell factors than the baseline design.
+The optimisation layer is implemented in Java and interfaces with COMSOL through its Java API. The resulting system behaves as an **expensive black-box optimisation loop**: the genetic algorithm proposes a candidate and the simulation backend determines its fitness.
 
-| Design      |         Purcell factor |
-| ----------- | ---------------------: |
-| Baseline    |   (1.003\times10^{11}) |
-| Optimised   | (6.55557\times10^{11}) |
-| Improvement |     **~6.54× / ~554%** |
+### Genetic Algorithm
 
-The result demonstrates the feasibility of using evolutionary optimisation to search a high-dimensional discrete resonator design space.
+The principal configuration uses:
 
-### Important limitation
+| Parameter | Value |
+|---|---|
+| Representation | Binary chromosome |
+| Number of variables | 100 |
+| Population size | 20 |
+| Selection | Tournament selection |
+| Tournament size | 3 |
+| Mutation probability | 0.05 |
+| Crossover | Single-point |
+| Crossover probability | 0.8 |
+| Offspring fraction | 0.8 |
+| Elitism | 2 individuals |
+| Maximum generations | 250 |
+| Objective | Single-objective maximisation |
 
-When a realistic dielectric loss tangent was introduced, the optimisation no longer reliably produced the desired **TE(_{01\delta})** operating mode.
+The optimiser supports **explicit random seeds**, allowing individual experiments to be reproduced and different seeds to be compared systematically.
 
-Although the resulting geometries continued to satisfy the 1.45 GHz resonance condition, the electromagnetic solutions increasingly corresponded to spurious modes.
+See `src/java/README.md` for implementation details.
 
-This exposed an important limitation of the original optimisation formulation: **maximising the Purcell factor alone does not guarantee that the resulting design operates in the physically desired mode.**
+---
 
-The project therefore serves primarily as a **proof of concept for computational MASER design optimisation**, while identifying mode selection and realistic dielectric losses as key requirements for a robust optimisation framework.
+## Making expensive evaluations tractable
 
-## Reasearch Question
+A major constraint is the cost of evaluating the objective function. A typical 250-generation run can take up to **eight hours**, making unnecessary evaluations particularly expensive.
 
-Can a stochastic optimisation algorithm discover novel MASER resonator geometries that improve the electromagnetic properties relevant to MASER operation, while satisfying a fixed resonance condition?
+Two mechanisms were therefore implemented to reduce computational cost.
 
-The optimisation targets the Purcell factor,
+### Evaluation caching
 
-[
-F_P = \frac{Q}{V_\mathrm{mode}},
-]
+The optimisation framework maintains a cache of previously evaluated configurations.
 
-where (Q) is the resonator quality factor and (V_\mathrm{mode}) is the mode volume.
+If the genetic algorithm generates a configuration that has already been evaluated, the previous result can be returned without repeating the FEM simulation.
 
-The optimisation problem can therefore be expressed as
+This is important because the optimiser is operating in a discrete space: **the same candidate can reappear during a stochastic search**. Reusing its previous evaluation avoids spending additional computational resources on an identical calculation.
 
-[
-\max_{\mathbf{x}\in{0,1}^{100}} F_P(\mathbf{x})
-]
+### Frequency correction and interpolation
 
-subject to the resonator operating at approximately
+The optimisation is subject to a target resonance frequency.
 
-[
-f_\mathrm{res}=1.45\ \mathrm{GHz}.
-]
+Rather than repeatedly rebuilding the model solely to correct the resonance frequency, the implementation uses a scaling procedure based on the relationship between resonance frequency and relative permittivity.
 
-## Methodology
-Physical model
-Design space
-Optimisation
-FEM simulation
-Analysis
+The most recent simulated points are used to construct a **Lagrange interpolating polynomial**, providing an estimate of the scaling required to reach the target frequency.
 
-### 1. Binary design representation
+This reduces the computational burden associated with repeatedly adjusting the model during optimisation.
 
-The resonator geometry is represented by a binary chromosome containing 100 design variables.
+Detailed implementation and modelling information is available in the component documentation.
 
-Each variable determines whether the corresponding region contains dielectric or air:
+---
 
-```text
-xᵢ = 0 → dielectric
-xᵢ = 1 → air
-```
+## Reproducibility and experiment metadata
 
-This representation provides a scalable discrete design space while allowing the genetic algorithm to modify the geometry using standard binary genetic operators.
+Reproducibility is treated as part of the optimisation infrastructure rather than as an afterthought.
 
-The resulting search space contains approximately
+Each experiment can be run with an explicitly specified **random seed**, allowing the stochastic search process to be repeated exactly under the same configuration.
 
-[
-1.27\times10^{30}
-]
+The project also implements a metadata system for recording the information associated with optimisation runs, including experiment configuration and generated results.
 
-possible configurations, making exhaustive enumeration infeasible.
+This makes it possible to distinguish between:
 
-### 2. Genetic Algorithm
+- different random seeds;
+- different optimisation configurations;
+- different model/simulation conditions;
+- different experimental runs; and
+- different result sets.
 
-The optimisation was implemented in Java using the [Jenetics](https://jenetics.io/) evolutionary optimisation framework.
+This infrastructure is particularly important for the statistical analysis: comparing stochastic optimisation runs is only meaningful when the underlying experimental conditions are known.
 
-The principal configuration was:
+---
 
-| Parameter             |                   Value |
-| --------------------- | ----------------------: |
-| Representation        |       Binary chromosome |
-| Number of variables   |                     100 |
-| Population size       |                      20 |
-| Selection             |    Tournament selection |
-| Tournament size       |                       3 |
-| Mutation probability  |                    0.05 |
-| Crossover             |  Single-point crossover |
-| Crossover probability |                     0.8 |
-| Offspring fraction    |                     0.8 |
-| Elitism               |           2 individuals |
-| Maximum generations   |                     250 |
-| Objective             | Maximise Purcell factor |
-| Optimisation type     |        Single-objective |
+## Key result: optimisation can expose problems with the objective
 
-Multiple independent optimisation runs were performed to investigate the stochastic behaviour of the algorithm.
+Under the original lossless model, the optimiser discovered a configuration with a substantially higher value of the simulation objective than the baseline:
 
-### 3. Resonance-frequency control
+| Design | Objective value |
+|---|---|
+| Baseline | $1.003 \cdot 10^{11}$ |
+| Optimised | $6.55557 \cdot 10^{11}$ |
+| Improvement | $ \sim 6.54 \times $ |
 
-A major computational challenge was maintaining the resonator at the target frequency of **1.45 GHz** while changing its geometry.
+This demonstrates that the evolutionary search can discover substantially different solutions within the high-dimensional design space.
 
-Directly changing the physical geometry would require the COMSOL model to be rebuilt and remeshed, increasing the computational cost of each objective evaluation.
+However, the more interesting result came when the model was made more realistic.
 
-Instead, the optimisation uses the approximate relationship
+Introducing dielectric losses caused highly optimised solutions to increasingly correspond to **undesired electromagnetic modes**, despite satisfying the target resonance condition.
 
-[
-f_\mathrm{res}\propto\frac{1}{\sqrt{\epsilon_r}}
-]
+The result exposed a fundamental limitation in the original optimisation formulation:
 
-to introduce a scaling factor through the global relative permittivity.
+> Maximising a proxy objective does not necessarily maximise the quantity that actually matters.
 
-This provides an efficient approximation to geometric scaling without requiring a complete geometric remeshing operation for every frequency adjustment.
+In this case, maximising the Purcell factor alone was insufficient to guarantee the desired operating mode.
 
-To improve the accuracy of this correction, the most recent three simulated data points are used to construct a **Lagrange interpolating polynomial**, which estimates the scaling factor required to bring the resonant frequency to 1.45 GHz.
+From a computational-research perspective, this is an important result in its own right. It demonstrates why **objective-function specification, constraints and validation of optimised solutions** matter as much as the optimisation algorithm.
 
-### 4. Automated finite-element simulation
+A more robust formulation would incorporate explicit mode selection or a physically motivated constraint alongside the existing objective.
 
-The Java application interfaces with COMSOL through the COMSOL Java API.
+---
 
-For each candidate chromosome, the pipeline:
+## Statistical analysis
 
-1. Decodes the binary chromosome.
-2. Generates the corresponding dielectric geometry.
-3. Applies the frequency-scaling procedure.
-4. Generates the finite-element mesh.
-5. Solves the electromagnetic model.
-6. Extracts the relevant resonator properties.
-7. Calculates the Purcell factor.
-8. Returns the fitness value to the genetic algorithm.
-9. Logs the simulation and optimisation results.
+The optimisation is stochastic, so a single successful run is not sufficient evidence that the algorithm performs reliably.
 
-The simulation therefore acts as an expensive black-box objective function within the optimisation loop.
+The Python analysis layer is therefore being developed to examine the distribution of optimisation outcomes across controlled experiments.
 
-### 5. Quantum analysis
+The intended analysis includes:
 
-The optimised geometries are subsequently analysed using a Julia-based quantum model.
+- performance across independent random seeds;
+- best and typical fitness;
+- mean and median performance;
+- standard deviation and interquartile range;
+- convergence behaviour;
+- variation between optimisation runs;
+- computational cost;
+- comparison against alternative search strategies.
 
-The Julia implementation uses [`QuantumCumulants`](https://qojulia.github.io/QuantumCumulants.jl/stable/) to construct and solve the relevant quantum dynamical model of the pentacene MASER.
+A particularly important future comparison is between the genetic algorithm and **random search under a matched evaluation budget**.
 
-The purpose of this stage is to translate the electromagnetic properties of the optimised resonator into a theoretical estimate of MASER output power.
+The aim is to determine whether the structure introduced by evolutionary search provides a meaningful advantage over simply evaluating many randomly selected configurations.
 
-This creates a separation between:
+This part of the project is **actively being extended**, with the Java optimisation and Julia modelling components complete and the Python statistical-analysis layer under development.
 
-* **electromagnetic geometry optimisation**, and
-* **quantum-system performance analysis**.
+See `src/python/README.md` for the current analysis implementation.
 
-## System Architecture
-
-                     MASER Model [COMSOL]
-                            ↓
-            Genetic Algorithm optimisation [Java]
-                            ↓
-                      FEM evaluation
-                            ↓
-                      250 generations ──┐
-                            ↑           ↓
-                            │       Frequency correction ───┐
-                            │               ↑               ↓
-                            │               ├───────────────┘
-                            ├───────────────┘
-                            ↓
-                      Purcell fitness
-                            ↓
-                         Results
-            ┌───────────────┴───────────────────┐
-            ↓                                   ↓
-Quantum simulation [Julia]          Statistical Analysis [Python]
-
-## Experimental Design
-Java optimisation framework
-COMSOL integration
-Julia analysis pipeline
-failure handling / reproducibility / performance
-
-The computational experiment consists of repeated stochastic optimisation runs using the same GA configuration.
-
-The objective of the experimental analysis is to distinguish between:
-
-* improvements caused by the evolutionary search process,
-* stochastic variation between independent runs, and
-* improvements that could be obtained simply by evaluating many random candidate geometries.
-
-### Planned statistical validation
-
-The repository will include fixed-seed experiments comparing:
-
-1. Genetic algorithm optimisation.
-2. Random search with a matched evaluation budget.
-3. Multiple independent seeds for each method.
-
-The analysis will report:
-
-* best fitness,
-* mean fitness,
-* median fitness,
-* standard deviation,
-* interquartile range,
-* convergence by generation, and
-* computational cost.
-
-This provides a more robust assessment than reporting only the single best optimisation run.
-
-## Results
-quantitative results
-convergence
-robustness
-validation
-
-### Lossless optimisation
-
-The lossless model provided a proof of concept for the optimisation framework.
-
-The best discovered geometry increased the Purcell factor from
-
-[
-1.003\times10^{11}
-]
-
-to
-
-[
-6.55557\times10^{11},
-]
-
-corresponding to approximately a **6.54× increase** or **554% improvement** relative to the baseline.
-
-### Convergence
-
-Optimisation results are analysed as a function of generation to determine:
-
-* whether fitness improves consistently,
-* how quickly the population converges,
-* whether optimisation plateaus,
-* and how much variability exists between independent runs.
-
-### Mode-selection failure under realistic loss
-
-Introducing a realistic dielectric loss tangent changed the optimisation landscape significantly.
-
-The optimised geometries continued to satisfy the 1.45 GHz resonance condition, but the resulting electromagnetic solutions did not reliably correspond to the desired TE(_{01\delta}) mode.
-
-This indicates that the original scalar objective,
-
-[
-F_P,
-]
-
-does not fully encode the physical requirements of the MASER.
-
-A future optimisation formulation should therefore incorporate an explicit mode-selection criterion or physically motivated constraint in addition to the Purcell factor.
+---
 
 ## Engineering
 
-### Java optimisation framework
+The project is implemented as a multi-language computational research pipeline, with each language serving a distinct role.
 
-The Java implementation provides the main optimisation and simulation orchestration layer.
+### Java - optimisation and simulation orchestration
 
-The codebase separates responsibilities into components for:
+Java contains the main optimisation engine and is responsible for:
 
-* application configuration,
-* genetic optimisation,
-* model representation,
-* COMSOL simulation,
-* input/output,
-* result processing, and
-* utilities.
+- genetic algorithm configuration and execution;
+- candidate representation;
+- experiment configuration;
+- random-seed control;
+- evaluation caching;
+- COMSOL interaction;
+- simulation execution;
+- objective extraction;
+- result logging;
+- experiment metadata; and
+- output generation.
 
-The Maven project provides dependency management and a reproducible Java build.
+The code is organised into separate components for optimisation, configuration, simulation, model representation, input/output and utilities.
 
-### COMSOL automation
+See `src/java/README.md`.
 
-The COMSOL workflow is automated through the COMSOL Java API.
+### COMSOL - expensive objective evaluation
 
-The automation covers:
+COMSOL provides the finite-element simulation used to evaluate candidate configurations.
 
-* geometry construction,
-* parameter configuration,
-* meshing,
-* finite-element solving,
-* result extraction, and
-* communication of the objective value back to the optimisation layer.
+The Java application automates the relevant stages of the simulation workflow, including:
 
-Because each simulation requires an electromagnetic FEM solve, the objective function is computationally expensive. A 250-generation optimisation therefore requires thousands of candidate evaluations and approximately eight hours for a typical run on the development system.
+1. constructing the candidate geometry;
+2. configuring the model;
+3. applying the frequency-correction procedure;
+4. generating the finite-element mesh;
+5. solving the model;
+6. extracting the required quantities; and
+7. returning the resulting objective value to the optimiser.
 
-### Julia quantum modelling
+See `comsol/README.md`.
 
-The Julia implementation provides a separate analysis layer for modelling the quantum dynamics of the optimised pentacene MASER.
+### Julia - downstream modelling
 
-The project uses:
+Julia provides a separate post-optimisation modelling stage.
 
-* `QuantumCumulants`
-* explicit parameter/configuration files
-* a Julia project environment
-* dedicated modules for simulation, symbolic modelling, analysis and plotting.
+The optimised electromagnetic properties are passed to a quantum model to estimate the resulting system behaviour.
 
-### Python analysis
+This keeps the expensive geometry search separate from the downstream physical analysis.
 
-Python is used for supplementary data analysis and visualisation.
+See `src/julia/README.md`.
 
-The analysis scripts operate on exported optimisation data and generated results rather than forming part of the optimisation loop.
+---
 
-## Technology Stack
+## Technology stack
 
-| Component                  | Technology          |
-| -------------------------- | ------------------- |
-| Optimisation               | Java 11             |
-| Genetic algorithm          | Jenetics            |
-| Build system               | Maven               |
-| Electromagnetic simulation | COMSOL Multiphysics |
-| COMSOL integration         | COMSOL Java API     |
-| Quantum modelling          | Julia 1.9.4         |
-| Quantum library            | QuantumCumulants    |
-| Data analysis              | Python + Julia      |
-| Documentation              | LaTeX               |
-| Version control            | Git                 |
+| Area | Technology |
+|---|---|
+| Optimisation | Java |
+| Genetic algorithm | Jenetics |
+| Build system | Maven |
+| Numerical simulation | COMSOL Multiphysics |
+| Simulation integration | COMSOL Java API |
+| Post-optimisation modelling | Julia |
+| Quantum modelling | QuantumCumulants |
+| Statistical analysis | Python |
+| Version control | Git |
+| Elitism | 2 individuals |
+| Maximum generations | 250 |
+| Objective | Single-objective maximisation |
 
+---
 
-## Repository Structure
+## Repository structure
 
 ```text
 maser-geometry-optimisation/
@@ -358,275 +315,121 @@ maser-geometry-optimisation/
 │   ├── ComsolModel.mph
 │   ├── README.md
 │   └── script/
-│       └── Script.java
-│
-├── java/
-│   ├── pom.xml
-│   ├── README.md
-│   └── src/
-│       └── main/
-│           └── java/
-│               ├── app/
-│               ├── config/
-│               ├── exported/
-│               ├── ga/
-│               ├── io/
-│               ├── model/
-│               ├── simulation/
-│               └── util/
-│
-├── julia/
-│   ├── Project.toml
-│   ├── Manifest.toml
-│   ├── README.md
-│   └── src/
-│       ├── analysis.jl
-│       ├── constants.jl
-│       ├── parameters.jl
-│       ├── PentaceneMaser.jl
-│       ├── plotting.jl
-│       ├── simulation.jl
-│       ├── spaces.jl
-│       ├── symbolic_model.jl
-│       └── utils.jl
-│
-├── python/
-│   ├── data_analysis.py
-│   ├── README.md
-│   └── requirements.txt
-│
-├── results/
-│   ├── processed/
-│   │   ├── ga-logs.csv
-│   │   ├── ga-results.csv
-│   │   ├── permittivity-scaling-results.csv
-│   │   └── spurious-mode-results.csv
-│   ├── raw/
-│   │   ├── ga-logs.csv
-│   │   └── ga-results.csv
-│   └── plots/
 │
 ├── docs/
 │   ├── thesis/
-│   │   ├── bibliography/
-│   │   ├── chapters/
-│   │   ├── figures/
-│   │   ├── frontmatter/
-│   │   ├── preamble/
-│   │   ├── tables/
-│   │   ├── thesis.tex
-│   │   └── thesis.pdf
 │   ├── presentation/
-│   │   └── presentation.pdf
 │   └── statistical-analysis/
 │
+├── results/
+│   ├── raw/
+│   ├── processed/
+│   └── plots/
+│
+├── src/
+│   ├── java/
+│   │   └── README.md
+│   ├── julia/
+│   │   └── README.md
+│   └── python/
+│       └── README.md
+│
+├── CITATION.cff
+├── LICENSE
+├── LICENSE-CC-BY-4.0
+├── pyproject.toml
 └── README.md
 ```
 
-## Installation
+---
 
-### Java
+## Results and further documentation
 
-Requirements:
+The `results/` directory contains optimisation outputs and processed datasets used for analysis.
 
-* Java 11
-* Maven
-* COMSOL Multiphysics with the required Java API access
+The `docs/` directory contains the original Master's thesis, presentation material and supporting documentation.
 
-Build the Java project with:
+For implementation-specific information:
 
-```bash
-cd java
-mvn clean package
-```
+- `COMSOL documentation` - simulation model and automation
+- `Java documentation` - optimisation engine and simulation pipeline
+- `Julia documentation` - downstream physical modelling
+- `Python documentation` - data and statistical analysis
 
-Run the test suite with:
+The detailed physics and mathematical derivations are intentionally kept in the component documentation and thesis rather than reproduced here.
 
-```bash
-mvn test
-```
+---
 
-### Julia
+## Limitations and ongoing work
 
-The Julia environment is specified by `Project.toml` and `Manifest.toml`.
+The project is a research prototype rather than a production optimisation platform.
 
-From the repository root:
+The main remaining research questions are:
 
-```julia
-using Pkg
-Pkg.activate("julia")
-Pkg.instantiate()
-```
+### Objective design
 
-### Python
+The current optimisation objective does not fully encode the desired operating mode.
 
-Install the Python dependencies with:
+A more complete formulation should incorporate additional constraints or objectives so that improvements in the proxy metric correspond more closely to improvements in the actual system.
 
-```bash
-cd python
-python -m pip install -r requirements.txt
-```
+### Statistical validation
 
-## Usage
+The statistical-analysis framework is still being expanded.
 
-### Full optimisation
+In particular, controlled comparisons between independent seeds and matched-budget baseline strategies will provide stronger evidence about the effectiveness and robustness of the genetic algorithm.
 
-The full optimisation pipeline requires a licensed COMSOL installation.
+### Computational efficiency
 
-The general workflow is:
+The simulation backend remains computationally expensive and is currently constrained by the cost of individual FEM evaluations.
 
-```text
-1. Configure optimisation parameters
-2. Launch COMSOL model
-3. Start Java optimisation
-4. Generate candidate binary geometries
-5. Run FEM simulations
-6. Extract Purcell factors
-7. Evolve population
-8. Export optimised designs
-9. Analyse optimised designs using Julia
-10. Generate figures and summary statistics using Julia/Python
-```
+Potential extensions include:
 
-See [`java/README.md`](java/README.md) and [`comsol/README.md`](comsol/README.md) for component-specific instructions.
+- parallel candidate evaluation;
+- surrogate-assisted optimisation;
+- alternative derivative-free optimisation methods; and
+- further exploitation of repeated configurations through caching.
 
-### Julia analysis
+### Hyperparameter sensitivity
 
-The Julia environment can be used independently of COMSOL once the required simulation results have been generated.
+The effect of genetic-algorithm parameters such as population size, mutation rate, crossover rate and number of generations could be investigated systematically.
 
-```bash
-cd julia
-julia --project=. src/analysis.jl
-```
+---
 
-### Python analysis
+## What this project demonstrates
 
-```bash
-cd python
-python data_analysis.py
-```
+Although the application is a MASER design problem, the computational methods developed here are broadly applicable to quantitative research problems involving expensive objective functions and stochastic search.
 
-### COMSOL Requirements
+The project demonstrates experience with:
 
-## Reproducibility
+- **High-dimensional optimisation** - formulating and searching a $2^100$ discrete space.
+- **Stochastic algorithms** - implementing and controlling a genetic optimisation process.
+- **Experimental design** - structuring repeatable computational experiments.
+- **Statistical reasoning** - analysing variation between stochastic runs rather than relying solely on a single best result.
+- **Numerical methods** - using interpolation and numerical simulation to make an expensive optimisation tractable.
+- **Computational efficiency** - caching previously evaluated configurations to avoid unnecessary simulation.
+- **Research infrastructure** - building a multi-language pipeline around an expensive external simulator.
+- **Reproducibility** - controlling random seeds and recording experiment metadata.
+- **Critical evaluation** - identifying when an apparently successful optimisation was exploiting an inadequately specified objective.
+- **Software engineering** - separating optimisation, simulation, modelling and analysis into distinct components.
 
-The optimisation is stochastic and therefore requires explicit experiment metadata for exact reproduction.
+The central lesson of the project is therefore not simply that a genetic algorithm can find a better configuration. It is that **a quantitative result is only useful when the optimisation objective, computational experiment and statistical evidence all support the conclusion being drawn**.
 
-For reproducible experiments, record:
+---
 
-* random seed,
-* GA configuration,
-* software versions,
-* COMSOL model version,
-* simulation parameters,
-* best chromosome,
-* fitness value,
-* runtime, and
-* generated result files.
+## Academic context
 
-The full electromagnetic optimisation cannot currently be reproduced without a valid COMSOL installation and the appropriate software licence.
+This repository originated as an individual Master's project in the Department of Materials at Imperial College London.
 
-The Julia and Python analysis stages can be reproduced independently where the required result files are available.
+The full academic treatment, including the underlying MASER physics and detailed derivations, is available in the Master's thesis.
 
-Future experiments use fixed random seeds to make independent optimisation runs exactly repeatable.
+For the purposes of this repository, the root README focuses on the **computational, optimisation and research methodology**; the detailed physical background is retained in the thesis and component-level documentation.
 
-## Limitations
-
-### Computational cost
-
-Each fitness evaluation requires a finite-element electromagnetic simulation. This makes the optimisation substantially more expensive than a conventional numerical optimisation problem.
-
-### Serial simulation pipeline
-
-The current implementation evaluates the COMSOL simulation backend serially. The optimisation framework is therefore constrained by the cost of individual FEM evaluations.
-
-### Idealised lossless model
-
-The strongest optimisation result was obtained under lossless dielectric conditions.
-
-Introducing a realistic dielectric loss tangent caused the optimiser to identify geometries associated with spurious modes rather than the desired TE(_{01\delta}) mode.
-
-### Objective-function specification
-
-The current optimisation maximises the Purcell factor without explicitly encoding the desired electromagnetic mode.
-
-Consequently, a high Purcell factor is not sufficient to guarantee a physically useful MASER design.
-
-### Reproducibility
-
-The original experimental runs were stochastic and were not recorded with fixed random seeds. Subsequent experiments should use deterministic seeds and retain complete run metadata.
-
-## Future Work
-
-Several extensions follow naturally from the limitations identified during the project.
-
-### Multi-criteria optimisation
-
-Extend the objective function to incorporate both Purcell-factor maximisation and mode selection.
-
-For example, a future formulation could use a physically motivated constraint or penalty for solutions that do not correspond to TE(_{01\delta}).
-
-### Realistic dielectric losses
-
-Repeat the optimisation using realistic dielectric loss parameters and investigate how the additional loss changes the structure of the search space.
-
-### Baseline comparison
-
-Compare the genetic algorithm against random search using a matched number of expensive FEM evaluations.
-
-### Hyperparameter analysis
-
-Investigate the sensitivity of optimisation performance to:
-
-* population size,
-* mutation probability,
-* crossover probability,
-* tournament size, and
-* number of generations.
-
-### Surrogate modelling
-
-The computational cost of the FEM simulation motivates investigating surrogate-assisted optimisation, where an inexpensive statistical model approximates the expensive simulation objective between high-fidelity evaluations.
-
-### Parallel evaluation
-
-Investigate parallel evaluation of independent candidate geometries where supported by the available COMSOL licensing and computational infrastructure.
-
-### Alternative optimisation methods
-
-Compare the genetic algorithm against other derivative-free optimisation approaches suitable for expensive, discrete and potentially multimodal objective functions.
-
-## Documentation
-
-The `docs/` directory contains the original Master's thesis, presentation, figures and supporting LaTeX source.
-
-Component-specific documentation is also available in:
-
-* [`comsol/README.md`](comsol/README.md)
-* [`java/README.md`](java/README.md)
-* [`julia/README.md`](julia/README.md)
-* [`python/README.md`](python/README.md)
-
-## Citation
-
-If you use this work, please cite the Master's thesis:
-
-```bibtex
-@mastersthesis{evans2025quantum,
-  author  = {Morgan Evans},
-  title   = {Quantum Design and Simulation of MASERs in the Strong Coupling Limit},
-  year    = {2025},
-  type    = {Master's Thesis},
-  note    = {[Online]. Available: \url{https://github.com/morganevans21/maser-geometry-optimisation}}
-}
-```
-
-## Acknowledgements
-
-This project was completed as an individual Master's project in the Department of Materials at Imperial College London.
+---
 
 ## Licence
 
-MIT License (code) & Creative Commons Attribution 4.0 International (thesis, presentation, etc.)
+The source code is released under the MIT License.
 
-The repository also contains simulation models and academic documentation with potentially different licensing considerations. Please review the licensing requirements of COMSOL, Imperial College London assets, third-party libraries and included fonts before redistributing modified versions.
+The thesis, presentation and associated academic materials are released under the Creative Commons Attribution 4.0 International License.
+
+The repository also contains third-party software and simulation models subject to their respective licences and usage requirements.
